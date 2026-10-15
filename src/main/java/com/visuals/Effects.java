@@ -1,7 +1,6 @@
 package com.visuals;
 
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
@@ -17,13 +16,19 @@ public class Effects {
     public static long targetTime;
     private static boolean wasDead;
 
+    /** Unico ponto que solta particulas (se o nome mudar de novo, so mexe aqui). */
+    private static void add(ClientWorld w, ParticleEffect pe, double x, double y, double z,
+                            double vx, double vy, double vz) {
+        w.addParticleClient(pe, x, y, z, vx, vy, vz);
+    }
+
     public static void onAttack(Entity e) {
         if (!(e instanceof LivingEntity le)) return;
         target = le;
         targetTime = System.currentTimeMillis();
         MinecraftClient mc = MinecraftClient.getInstance();
         ClientWorld w = mc.world;
-        if (w == null) return;
+        if (w == null || mc.player == null) return;
 
         if (Features.HIT_EFFECT.enabled) {
             Feature f = Features.HIT_EFFECT;
@@ -36,12 +41,12 @@ public class Effects {
                 double vy = Math.random() * 0.35;
                 double vz = (Math.random() - 0.5) * 0.5;
                 switch (style) {
-                    case 1 -> { if (i % 3 == 0) w.addParticle(ParticleTypes.HEART, x, y, z, vx * 0.3, vy * 0.3, vz * 0.3); }
-                    case 2 -> w.addParticle(ParticleTypes.CHERRY_LEAVES, x, y, z, vx * 0.5, vy * 0.2, vz * 0.5);
-                    case 3 -> w.addParticle(ParticleTypes.FIREWORK, x, y, z, vx * 0.4, vy * 0.4, vz * 0.4);
+                    case 1 -> { if (i % 3 == 0) add(w, ParticleTypes.HEART, x, y, z, vx * 0.3, vy * 0.3, vz * 0.3); }
+                    case 2 -> add(w, ParticleTypes.CHERRY_LEAVES, x, y, z, vx * 0.5, vy * 0.2, vz * 0.5);
+                    case 3 -> add(w, ParticleTypes.FIREWORK, x, y, z, vx * 0.4, vy * 0.4, vz * 0.4);
                     default -> {
-                        w.addParticle(ParticleTypes.END_ROD, x, y, z, vx, vy, vz);
-                        if (i % 2 == 0) w.addParticle(new DustParticleEffect(col, 1.2f), x, y, z, vx, vy, vz);
+                        add(w, ParticleTypes.END_ROD, x, y, z, vx, vy, vz);
+                        if (i % 2 == 0) add(w, new DustParticleEffect(col, 1.2f), x, y, z, vx, vy, vz);
                     }
                 }
             }
@@ -54,7 +59,7 @@ public class Effects {
                 case 2 -> SoundEvents.ENTITY_ARROW_HIT_PLAYER;
                 default -> SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME;
             };
-            mc.getSoundManager().play(PositionedSoundInstance.master(s, f.get("Tom"), f.get("Volume")));
+            mc.player.playSound(s, f.get("Volume"), f.get("Tom"));
         }
     }
 
@@ -94,15 +99,15 @@ public class Effects {
                 double px = target.getX() + Math.cos(a) * r;
                 double pz = target.getZ() + Math.sin(a) * r;
                 switch (shape) {
-                    case 1 -> w.addParticle(new DustParticleEffect(col, 0.8f), px,
+                    case 1 -> add(w, new DustParticleEffect(col, 0.8f), px,
                             target.getY() + h * (i / (double) n), pz, 0, 0, 0);
                     case 2 -> { if (w.getTime() % 4 == 0 && i % 2 == 0)
-                            w.addParticle(ParticleTypes.HEART, px, target.getY() + h * 0.6, pz, 0, 0, 0); }
+                            add(w, ParticleTypes.HEART, px, target.getY() + h * 0.6, pz, 0, 0, 0); }
                     case 3 -> { if (w.getTime() % 3 == 0)
-                            w.addParticle(ParticleTypes.CHERRY_LEAVES, px, target.getY() + h * 0.8, pz, 0, 0, 0); }
+                            add(w, ParticleTypes.CHERRY_LEAVES, px, target.getY() + h * 0.8, pz, 0, 0, 0); }
                     default -> {
                         double wave = (Math.sin(t * 0.5) + 1) / 2;
-                        w.addParticle(new DustParticleEffect(col, 0.8f), px, target.getY() + h * wave, pz, 0, 0, 0);
+                        add(w, new DustParticleEffect(col, 0.8f), px, target.getY() + h * wave, pz, 0, 0, 0);
                     }
                 }
             }
@@ -112,7 +117,7 @@ public class Effects {
         if (Features.TRAIL.enabled && mc.player.getVelocity().horizontalLengthSquared() > 0.01) {
             int n = (int) Features.TRAIL.get("Densidade");
             for (int i = 0; i < n; i++) {
-                w.addParticle(ParticleTypes.CLOUD,
+                add(w, ParticleTypes.CLOUD,
                         mc.player.getX() + (Math.random() - 0.5) * 0.4, mc.player.getY() + 0.1,
                         mc.player.getZ() + (Math.random() - 0.5) * 0.4, 0, 0.01, 0);
             }
@@ -127,7 +132,7 @@ public class Effects {
                 default -> ParticleTypes.CHERRY_LEAVES;
             };
             for (int i = 0; i < n; i++) {
-                w.addParticle(pe,
+                add(w, pe,
                         mc.player.getX() + (Math.random() - 0.5) * 16,
                         mc.player.getY() + 2 + Math.random() * 5,
                         mc.player.getZ() + (Math.random() - 0.5) * 16, 0, -0.02, 0);
